@@ -7,7 +7,7 @@ license-file = "LICENSE"
 description = "some helper functions and macros to ease usage of quickcheck"
 repository = "https://github.com/TimeExceed/rs_quickcheck_util"
 readme = "README.md"
-categories = ["development-tools.categories.testing"]
+categories = ["development-tools::testing"]
 
 [dependencies]
 quickcheck = "1"
