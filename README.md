@@ -1,1 +1,1 @@
-# rs_test_util
+This crate provides some useful helper functions and macros based on [quickcheck](https://github.com/BurntSushi/quickcheck).

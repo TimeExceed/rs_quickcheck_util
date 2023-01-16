@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 mod gen_bytes;
 pub use self::gen_bytes::*;
 mod shrink_field;

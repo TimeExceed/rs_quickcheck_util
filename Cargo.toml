@@ -1,11 +1,13 @@
 [package]
 name = "rs_quickcheck_util"
-version = "0.5.0"
+rust-version = "1.56"
+version = "0.1.0"
 edition = "2021"
 license-file = "LICENSE"
 description = "some helper functions and macros to ease usage of quickcheck"
 repository = "https://github.com/TimeExceed/rs_quickcheck_util"
 readme = "README.md"
+categories = ["development-tools.categories.testing"]
 
 [dependencies]
 quickcheck = "1"

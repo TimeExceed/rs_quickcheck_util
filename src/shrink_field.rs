@@ -1,4 +1,29 @@
-
+/// Shrinks one field of an object.
+///
+/// ```rust
+/// struct T {
+///     a: A,
+///     b: B,
+/// }
+/// ```
+/// Then, for an object `t: T`, `shrink_a_field!(t, a)` will result in an iterator of type `T`,
+/// whose `a` field is shrinked but `b` field keeps the same as that of `t`.
+///
+/// For a mapping field, sometimes the key is determined by the value.
+/// To keep this constraint in shrinking, one can use the 3-clause arm.
+/// For example,
+///
+/// ```rust
+/// struct T {
+///     m: BTreeMap<String, usize>,
+/// }
+/// ```
+/// For an object `t: T`,
+/// ```rust
+/// shrink_a_field!(t, m, |x: &usize| -> String {format!("{}", x)})
+/// ```
+/// Then, both size and values of `t.m` will be shrinked, but the relation between
+/// keys and values is kept.
 #[macro_export]
 macro_rules! shrink_a_field {
     ($obj:expr, $field:ident) => {
