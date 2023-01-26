@@ -1,5 +1,44 @@
 use quickcheck::Gen;
 
+/// Generate a sequence with exponentiall distributed length.
+/// It is often more efficient to find bugs by covering short inputs.
+///
+/// *   the alphabet, the stopper and the stop possibility $p$
+///
+///     Suppose the alphabet contains $m$ characters, among which there are $n$
+///     stopper characters.
+///     Then the stop possibility $p=n/m$.
+///
+///     *   It is valid for the alphabet to contain duplicated characters.
+///         For example, a alphabet `a..` with stoper `.` will make $p=2/3$.
+///
+/// *   the length range
+///
+///     *   unlimited in both sides, `..`
+///
+///         Suppose the stop possiblity is $p$.
+///         Then, it is of possibility $p$ to generate an empty sequence,
+///         $p(1-p)$ to generate a sequence of length 1,
+///         ...,
+///         $p(1-p)^n$ to generate a sequence of length $n$.
+///
+///     *   left-limited, `l..`
+///
+///         This function will generate a sequence whose length is at least $l$.
+///         To be precise, for any sequence length $n\geq l$, its possibility is
+///         $p(1-p)^{(n-l)}$.
+///
+///     *   right-limited, `..r`
+///
+///         This function will generate a sequence whose length is at most $r$.
+///         Suppose the cumulative possibility of length $n<r$ is $q$.
+///         Then, $r$-length generated sequence is of possibility $1-q$.
+///
+///     *   empty range
+///
+///         This is invalid.
+///         Then arbitrary sequence will be generated.
+///
 pub fn gen_bytes<R>(
     g: &mut Gen,
     alphabet: &[u8],

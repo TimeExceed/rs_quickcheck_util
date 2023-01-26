@@ -1,13 +1,16 @@
 [package]
 name = "rs_quickcheck_util"
 rust-version = "1.56"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license-file = "LICENSE"
 description = "some helper functions and macros to ease usage of quickcheck"
 repository = "https://github.com/TimeExceed/rs_quickcheck_util"
 readme = "README.md"
 categories = ["development-tools::testing"]
+
+[package.metadata.docs.rs]
+rustdoc-args = [ "--html-in-header", "katex.html" ]
 
 [dependencies]
 quickcheck = "1"
