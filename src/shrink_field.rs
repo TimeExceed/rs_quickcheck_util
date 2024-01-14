@@ -1,29 +1,58 @@
 /// Shrinks one field of an object.
 ///
-/// ```rust
-/// struct T {
-///     a: A,
-///     b: B,
-/// }
-/// ```
-/// Then, for an object `t: T`, `shrink_a_field!(t, a)` will result in an iterator of type `T`,
-/// whose `a` field is shrinked but `b` field keeps the same as that of `t`.
-///
-/// For a mapping field, sometimes the key is determined by the value.
-/// To keep this constraint in shrinking, one can use the 3-clause arm.
+/// For any object `t` of type `T` and `a` is one of its field,
+/// `shrink_a_field!(t, a)` will result in an iterator of type `T`,
+/// whose `a` fields are shrinked and the other fields are kept untouched.
 /// For example,
-///
 /// ```rust
+/// use rs_quickcheck_util::shrink_a_field;
+///
+/// #[derive(Debug, Clone)]
 /// struct T {
-///     m: BTreeMap<String, usize>,
+///     a: i64,
+///     b: i64,
+/// }
+/// let t = T {
+///     a: 100,
+///     b: 42,
+/// };
+/// for x in shrink_a_field!(t, a) {
+///     assert!(x.a < t.a);
+///     assert_eq!(x.b, t.b);
 /// }
 /// ```
-/// For an object `t: T`,
+///
+/// Sometimes, a field must be shrinked with a different behaviour,
+/// e.g., for a Vec field, shrinking the vector but not shrinking their elements.
+/// This can be achieved by "wrapping" the field.
+///
 /// ```rust
-/// shrink_a_field!(t, m, |x: &usize| -> String {format!("{}", x)})
+/// use rs_quickcheck_util::{shrink_a_field, Unshrinkable};
+///
+/// #[derive(Debug, Clone)]
+/// struct T {
+///     a: Vec<i64>,
+/// }
+/// let t = T {
+///     a: [10, 10].into(),
+/// };
+/// let it = shrink_a_field!(
+///     t,
+///     a,
+///     |xs: &Vec<i64>| {
+///         xs.iter().map(|x| Unshrinkable::new(*x)).collect::<Vec<_>>()
+///     },
+///     |xs: Vec<Unshrinkable::<i64>>| {
+///         xs.into_iter()
+///             .map(|x| x.take())
+///             .collect::<Vec<_>>()
+///     }
+/// );
+/// for x in it {
+///     assert!(x.a.iter().all(|y| *y == 10));
+/// }
 /// ```
-/// Then, both size and values of `t.m` will be shrinked, but the relation between
-/// keys and values is kept.
+///
 #[macro_export]
 macro_rules! shrink_a_field {
     ($obj:expr, $field:ident) => {
@@ -38,6 +67,57 @@ macro_rules! shrink_a_field {
                 })
         }
     };
+    ($obj:expr, $field:ident, $wrap_fn:expr, $unwrap_fn:expr) => {
+        {
+            use quickcheck::Arbitrary;
+            let wrap_fn = $wrap_fn;
+            let unwrap_fn = $unwrap_fn;
+            let xs = wrap_fn(&($obj.$field));
+            let me = $obj.clone();
+            xs.shrink()
+                .map(move |x| {
+                    let mut res = me.clone();
+                    res.$field = unwrap_fn(x);
+                    res
+                })
+        }
+    }
+}
+
+/// Shrinks a mapping field whose key is determined by the value.
+///
+/// For a mapping field, sometimes the key is determined by the value.
+/// To keep this constraint in shrinking, one can use `shrink_a_map_field`.
+/// For example,
+///
+/// ```rust
+/// use rs_quickcheck_util::shrink_a_map_field;
+/// use std::collections::BTreeMap;
+///
+/// #[derive(Debug, Clone)]
+/// struct T {
+///     m: BTreeMap<String, usize>,
+/// }
+/// let t = T {
+///     m: [
+///         ("1".to_string(), 1),
+///         ("2".to_string(), 2),
+///         ("3".to_string(), 3),
+///         ("4".to_string(), 4),
+///         ("5".to_string(), 5),
+///         ("6".to_string(), 6),
+///     ].into(),
+/// };
+/// for x in shrink_a_map_field!(t, m, |x: &usize| -> String {format!("{}", x)}) {
+///     for (k, v) in x.m.iter() {
+///         assert_eq!(k.to_string(), format!("{}", v));
+///     }
+/// }
+/// ```
+/// Then, both size and values of `t.m` will be shrinked, but the relation between
+/// keys and values are kept.
+#[macro_export]
+macro_rules! shrink_a_map_field {
     ($obj:expr, $field:ident, $key_fn:expr) => {
         {
             use quickcheck::Arbitrary;
@@ -84,7 +164,7 @@ mod tests {
 
     #[quickcheck]
     fn shrink_map(trial: B) {
-        let bs: Vec<_> = shrink_a_field!(trial, b, |v: &usize| -> usize {*v}).collect();
+        let bs: Vec<_> = shrink_a_map_field!(trial, b, |v: &usize| -> usize {*v}).collect();
         for x in bs.iter() {
             let keys: Vec<_> = x.b.keys().copied().collect();
             let values: Vec<_> = x.b.values().copied().collect();
@@ -112,4 +192,22 @@ mod tests {
             Self{b}
         }
     }
+
+    #[test]
+    fn unshrinkable() {
+        let z = A {
+            a: 100,
+            b: 100,
+        };
+        let it = shrink_a_field!(
+            z,
+            b,
+            |x: &usize| {crate::Unshrinkable::new(*x)},
+            |x: crate::Unshrinkable::<usize>| {x.take()}
+        );
+        for x in it {
+            assert_eq!(x.b, z.b);
+        }
+    }
+
 }
